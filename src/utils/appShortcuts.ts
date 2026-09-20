@@ -3,14 +3,12 @@ import { isTerminalCompositionKeyEvent, type TerminalKeySnapshot } from "./termi
 
 export type AppShortcutAction =
   | "none"
-  | "toggleGrid"
   | "splitHorizontal"
   | "splitVertical"
   | "openBrowser"
   | "closePane"
   | "newWorkspace"
   | "closeWorkspace"
-  | "toggleNotifications"
   | "toggleSettings"
   | "increaseFontSize"
   | "decreaseFontSize"
@@ -66,14 +64,12 @@ export const decideAppShortcut = (
   if (isPlatformClipboardShortcut(event, platform)) return { kind: "none" };
 
   if (isCtrlShiftShortcut(event)) {
-    if (keyEquals(event, "g")) return { kind: "toggleGrid" };
     if (keyEquals(event, "d")) return { kind: "splitHorizontal" };
     if (keyEquals(event, "e")) return { kind: "splitVertical" };
     if (keyEquals(event, "o")) return { kind: "openBrowser" };
     if (keyEquals(event, "w")) return { kind: "closePane" };
     if (keyEquals(event, "t")) return { kind: "newWorkspace" };
     if (keyEquals(event, "x")) return { kind: "closeWorkspace" };
-    if (keyEquals(event, "i")) return { kind: "toggleNotifications" };
   }
 
   if (

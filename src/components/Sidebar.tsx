@@ -1,7 +1,6 @@
 import { useWorkspaceStore, collectLeafIds, type LayoutNode, type LeafNode, type Workspace } from "../stores/workspace";
 import { useWorkspaceInfoStore } from "../hooks/useWorkspaceInfo";
 import { useNotificationStore } from "../stores/notifications";
-import { useAgentTaskStore } from "../stores/agentTasks";
 import { useSshHostsStore, type SshHost } from "../stores/sshHosts";
 import { useTmuxSessionsStore } from "../stores/tmuxSessions";
 import { useSettingsStore } from "../stores/settings";
@@ -13,8 +12,6 @@ import { SidebarTmuxSessions } from "./SidebarTmuxSessions";
 import { useMonitorStore, type MonitorSnapshot } from "../stores/monitor";
 import { useState, useRef } from "react";
 import type { SshConnection } from "../utils/sshConnection";
-import { attentionAgentTasks } from "../utils/agentTask";
-import { useLaunchProfileStore } from "../stores/launchProfiles";
 
 interface SidebarMonitorInfo {
   monitorId: string;
@@ -25,7 +22,6 @@ interface SidebarMonitorInfo {
 
 interface SidebarProps {
   onOpenSettings?: () => void;
-  onOpenAgentLauncher?: () => void;
   onOpenSshPanel?: () => void;
   onEditHost?: (hostId: string) => void;
   onConnectHost?: (host: SshHost) => void;
@@ -33,8 +29,6 @@ interface SidebarProps {
   onCloseMonitor?: () => void;
   onViewClaudeSession?: (sshTarget: string, project: string, projectPath: string | undefined, sessionId: string, sshConnection?: SshConnection) => void;
   onResumeClaudeSession?: (sshCommand: string, projectPath: string, sessionId: string, sshConnection?: SshConnection) => void;
-  gridView?: boolean;
-  onToggleGridView?: () => void;
 }
 
 const collectTerminalLeaves = (node: LayoutNode): LeafNode[] => {
@@ -94,7 +88,7 @@ const formatMemory = (bytes: number): string => {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}GB`;
 };
 
-export const Sidebar = ({ onOpenSettings, onOpenAgentLauncher, onOpenSshPanel, onEditHost, onConnectHost, monitor, onCloseMonitor, onViewClaudeSession, onResumeClaudeSession, gridView, onToggleGridView }: SidebarProps) => {
+export const Sidebar = ({ onOpenSettings, onOpenSshPanel, onEditHost, onConnectHost, monitor, onCloseMonitor, onViewClaudeSession, onResumeClaudeSession }: SidebarProps) => {
   // Granular selectors so the sidebar only re-renders on the slices it shows,
   // not on every workspace-store mutation. Actions are stable refs in zustand.
   const workspaces = useWorkspaceStore((s) => s.workspaces);
@@ -106,15 +100,12 @@ export const Sidebar = ({ onOpenSettings, onOpenAgentLauncher, onOpenSshPanel, o
   const reorderWorkspaces = useWorkspaceStore((s) => s.reorderWorkspaces);
   const infoMap = useWorkspaceInfoStore((s) => s.info);
   const notifications = useNotificationStore((s) => s.notifications);
-  const agentTasks = useAgentTaskStore((s) => s.tasks);
-  const togglePanel = useNotificationStore((s) => s.togglePanel);
   const markRead = useNotificationStore((s) => s.markRead);
   const sshHosts = useSshHostsStore((s) => s.hosts);
   const tmuxAttach = useTmuxSessionsStore((s) => s._attach);
   const sessionListMetadata = useSettingsStore((s) => s.sessionListMetadata);
   const enableExperimentalCwdRestore = useSettingsStore((s) => s.enableExperimentalCwdRestore);
   const historyEntries = useHistoryStore((s) => s.entries);
-  const toggleProfiles = useLaunchProfileStore((s) => s.togglePanel);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedHostIds, setSelectedHostIds] = useState<Set<string>>(new Set());
   const dragFromIdxRef = useRef<number | null>(null);
@@ -123,7 +114,6 @@ export const Sidebar = ({ onOpenSettings, onOpenAgentLauncher, onOpenSshPanel, o
 
   const monitorSeries = useMonitorStore((s) => monitor ? s.series[monitor.monitorId] : undefined);
   const latestSnapshot = monitorSeries?.[monitorSeries.length - 1] as MonitorSnapshot | undefined;
-  const totalUnread = notifications.filter((n) => !n.read).length + attentionAgentTasks(agentTasks).length;
   const [editName, setEditName] = useState("");
 
   const handleAdd = () => addWorkspace();
@@ -152,25 +142,6 @@ export const Sidebar = ({ onOpenSettings, onOpenAgentLauncher, onOpenSshPanel, o
         <div style={styles.headerBtns}>
           <button className="muxpit-btn" onClick={handleAdd} style={styles.addBtn} title="New workspace (Ctrl+Shift+T)">
             +
-          </button>
-          <button className="muxpit-btn" onClick={toggleProfiles} style={styles.addBtn} title="Launch profiles">
-            P
-          </button>
-          <button className="muxpit-btn" onClick={onOpenAgentLauncher} style={styles.addBtn} title="Open AI pane">
-            AI
-          </button>
-          <button
-            className="muxpit-btn"
-            onClick={onToggleGridView}
-            style={{ ...styles.addBtn, ...(gridView ? { background: "#313244", borderColor: "#89b4fa", color: "#cdd6f4" } : {}) }}
-            title="Grid overview (Ctrl+Shift+G)"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7" />
-              <rect x="14" y="3" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" />
-              <rect x="14" y="14" width="7" height="7" />
-            </svg>
           </button>
           <button className="muxpit-btn" onClick={onOpenSettings} style={styles.addBtn} title="Settings (Ctrl+,)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -461,10 +432,6 @@ export const Sidebar = ({ onOpenSettings, onOpenAgentLauncher, onOpenSshPanel, o
 
       <div style={styles.footer}>
         <span style={styles.footerText}>{workspaces.length} sessions</span>
-        <button className="muxpit-btn" style={styles.inboxButton} onClick={togglePanel} title="Agent inbox (Ctrl+Shift+I)">
-          Inbox
-          {totalUnread > 0 && <span style={styles.notifBadge}>{totalUnread}</span>}
-        </button>
       </div>
     </div>
   );
@@ -675,21 +642,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   footerText: {
     color: "var(--muxpit-subtext)",
-    fontSize: 12,
-  },
-  notifBadge: {
-    color: "#f38ba8",
-    fontSize: 12,
-    fontWeight: 700,
-  },
-  inboxButton: {
-    display: "flex",
-    alignItems: "center",
-    gap: 5,
-    padding: 0,
-    color: "var(--muxpit-subtext)",
-    background: "transparent",
-    border: "none",
     fontSize: 12,
   },
 

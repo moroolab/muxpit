@@ -10,10 +10,10 @@ const source = readFileSync(
 test("dashboard popover stays anchored below its tabs", () => {
   const dashboardTabs = source.indexOf('<div style={styles.dashboardTabs}>');
   const popover = source.indexOf("style={styles.popover}");
-  const filesButton = source.indexOf("onClick={onToggleFilesRail}");
+  const settingsButton = source.indexOf('title="Settings"');
 
   assert.ok(dashboardTabs >= 0);
-  assert.ok(popover > dashboardTabs && popover < filesButton);
+  assert.ok(popover > dashboardTabs && popover < settingsButton);
   assert.match(source, /dashboardTabs:\s*\{[\s\S]*?position: "relative"/);
   assert.match(source, /popover:\s*\{[\s\S]*?top: 36,[\s\S]*?left: 0,/);
   assert.doesNotMatch(source, /popover:\s*\{[\s\S]*?right: 138,/);

@@ -302,15 +302,21 @@ test("AI workbench reopens without resetting a live target", () => {
   assert.match(workbench, /for \(const channelId of channels\.current\.keys\(\)\) void closeDesktopAgent\(channelId\)/);
 });
 
-test("AI workbench entry points remain visible without unread notifications", () => {
+test("AI workbench entry points stay hidden in the terminal chrome", () => {
+  const app = readSource("../src/App.tsx");
   const sidebar = readSource("../src/components/Sidebar.tsx");
   const topBar = readSource("../src/components/TopDashboardBar.tsx");
 
-  assert.match(sidebar, />\s*AI\s*</);
-  assert.match(sidebar, />\s*Inbox\s*/);
-  assert.doesNotMatch(sidebar, /totalUnread > 0 && \(\s*<button[^>]*>\s*Inbox/);
-  assert.match(topBar, />\s*AI\s*</);
-  assert.match(topBar, /Inbox\{totalUnread/);
+  assert.match(app, /const \[agentWorkbenchOpen, setAgentWorkbenchOpen\] = useState\(false\)/);
+  assert.match(app, /const \[filesRailVisible\] = useState\(false\)/);
+  assert.doesNotMatch(app, /<OnboardingPanel/);
+  assert.doesNotMatch(sidebar, />\s*AI\s*</);
+  assert.doesNotMatch(sidebar, />\s*Inbox\s*/);
+  assert.doesNotMatch(topBar, />\s*Files\s*</);
+  assert.doesNotMatch(topBar, />\s*Grid\s*</);
+  assert.doesNotMatch(topBar, />\s*Profiles\s*</);
+  assert.doesNotMatch(topBar, />\s*AI\s*</);
+  assert.doesNotMatch(topBar, /Inbox\{totalUnread/);
 });
 
 test("onboarding documents hooks and keeps dangerous resume separate", () => {

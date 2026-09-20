@@ -96,7 +96,6 @@ export const SettingsPanel = ({ open, onClose }: SettingsPanelProps) => {
     setNotificationSound,
     resetNotificationSound,
     setEnableExperimentalAgentDangerousResume,
-    setHasCompletedOnboarding,
     setSessionListMetadata,
   } = useSettingsStore();
   const {
@@ -203,17 +202,6 @@ export const SettingsPanel = ({ open, onClose }: SettingsPanelProps) => {
               <div style={styles.hint}>Creates ~/.local/bin/muxpit-cli for terminal use.</div>
             </div>
           )}
-
-          <div style={styles.section}>
-            <label style={styles.label}>AI Workbench</label>
-            <button
-              onClick={() => { setHasCompletedOnboarding(false); onClose(); }}
-              style={styles.smallBtn}
-            >
-              Show setup guide
-            </button>
-            <div style={styles.hint}>CLI setup, agent hooks, restore options, and shortcuts.</div>
-          </div>
 
           {/* Font Size */}
           <div style={styles.section}>

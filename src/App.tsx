@@ -14,7 +14,6 @@ import { PaneNumberOverlay } from "./components/PaneNumberOverlay";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { LaunchProfilesPanel } from "./components/LaunchProfilesPanel";
 import { AgentWorkbenchPanel } from "./components/AgentWorkbenchPanel";
-import { OnboardingPanel } from "./components/OnboardingPanel";
 import { useWorkspaceStore, collectLeafIds, findLeafByPtyId } from "./stores/workspace";
 import {
   buildSshConnection,
@@ -105,9 +104,9 @@ export const App = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sshPanelOpen, setSshPanelOpen] = useState(false);
   const [sshPanelEditId, setSshPanelEditId] = useState<string | null>(null);
-  const [gridView, setGridView] = useState(false);
-  const [agentWorkbenchOpen, setAgentWorkbenchOpen] = useState(true);
-  const [filesRailVisible, setFilesRailVisible] = useState(true);
+  const [gridView] = useState(false);
+  const [agentWorkbenchOpen, setAgentWorkbenchOpen] = useState(false);
+  const [filesRailVisible] = useState(false);
   const [sidebarMonitor, setSidebarMonitor] = useState<{ monitorId: string; sshTarget: string; sshCommand: string; sshConnection?: SshConnection } | null>(null);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const launchProfilesOpen = useLaunchProfileStore((state) => state.panelOpen);
@@ -122,7 +121,6 @@ export const App = () => {
   const customColors = useSettingsStore((s) => s.customColors);
   const customThemes = useSettingsStore((s) => s.customThemes);
   const dashboardLayout = useSettingsStore((s) => s.dashboardLayout);
-  const hasCompletedOnboarding = useSettingsStore((s) => s.hasCompletedOnboarding);
   const activeInfo = useWorkspaceInfoStore((s) => activeId ? s.info[activeId] : undefined);
   const fileLeaf = activeWs
     ? findLeafNode(activeWs.layout, activeWs.focusedLeafId) ?? findFirstLeafNode(activeWs.layout)
@@ -143,7 +141,6 @@ export const App = () => {
     sshPanelOpen ||
     closeConfirmOpen ||
     launchProfilesOpen ||
-    !hasCompletedOnboarding ||
     notificationPanelOpen ||
     historyPanelOpen ||
     paneNumbersVisible
@@ -780,9 +777,6 @@ export const App = () => {
       if (shortcut.kind !== "none") {
         e.preventDefault();
         switch (shortcut.kind) {
-          case "toggleGrid":
-            setGridView((prev) => !prev);
-            return;
           case "splitHorizontal":
             splitLeaf(activeWs.id, activeWs.focusedLeafId, "horizontal");
             return;
@@ -809,9 +803,6 @@ export const App = () => {
               destroyAllTerminals(leaves);
               removeWorkspace(activeWs.id);
             }
-            return;
-          case "toggleNotifications":
-            useNotificationStore.getState().togglePanel();
             return;
           case "toggleSettings":
             setSettingsOpen((prev) => !prev);
@@ -933,7 +924,6 @@ export const App = () => {
       ) : (
         <TopDashboardBar
           onOpenSettings={() => setSettingsOpen(true)}
-          onOpenAgentLauncher={() => setAgentWorkbenchOpen((open) => !open)}
           onOpenSshPanel={() => { setSshPanelEditId(null); setSshPanelOpen(true); }}
           onEditHost={(hostId) => { setSshPanelEditId(hostId); setSshPanelOpen(true); }}
           onConnectHost={handleConnectHost}
@@ -942,17 +932,12 @@ export const App = () => {
           onWindowMinimize={handleWindowMinimize}
           onWindowMaximize={handleWindowMaximize}
           onWindowClose={handleWindowClose}
-          gridView={gridView}
-          onToggleGridView={() => setGridView((prev) => !prev)}
-          filesRailVisible={filesRailVisible}
-          onToggleFilesRail={() => setFilesRailVisible((prev) => !prev)}
         />
       )}
       <div style={styles.appBody}>
         {dashboardLayout === "left" ? (
           <Sidebar
             onOpenSettings={() => setSettingsOpen(true)}
-            onOpenAgentLauncher={() => setAgentWorkbenchOpen((open) => !open)}
             onOpenSshPanel={() => { setSshPanelEditId(null); setSshPanelOpen(true); }}
             onEditHost={(hostId) => { setSshPanelEditId(hostId); setSshPanelOpen(true); }}
             onConnectHost={handleConnectHost}
@@ -960,8 +945,6 @@ export const App = () => {
             onCloseMonitor={handleCloseMonitor}
             onViewClaudeSession={handleViewClaudeSession}
             onResumeClaudeSession={handleResumeClaudeSession}
-            gridView={gridView}
-            onToggleGridView={() => setGridView((prev) => !prev)}
           />
         ) : filesRailVisible ? (
           <FilesRail
@@ -997,7 +980,6 @@ export const App = () => {
                 <span><b>Ctrl+Shift+T</b> New session</span>
                 <span><b>Ctrl+Shift+D</b> Split horizontal</span>
                 <span><b>Ctrl+Shift+E</b> Split vertical</span>
-                <span><b>Ctrl+Shift+G</b> Grid overview</span>
                 <span><b>H</b> button to manage SSH hosts</span>
               </div>
             </div>
@@ -1014,7 +996,6 @@ export const App = () => {
           open={launchProfilesOpen}
           onClose={() => setLaunchProfilesOpen(false)}
         />
-        <OnboardingPanel />
         <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
         <SshHostPanel
           open={sshPanelOpen}

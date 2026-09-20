@@ -18,7 +18,7 @@ const baseEvent = {
 test("app shortcut policy keeps existing Ctrl+Shift app commands", () => {
   assert.deepEqual(
     decideAppShortcut({ ...baseEvent, key: "G", ctrlKey: true, shiftKey: true }, "linux"),
-    { kind: "toggleGrid" },
+    { kind: "none" },
   );
   assert.deepEqual(
     decideAppShortcut({ ...baseEvent, key: "D", ctrlKey: true, shiftKey: true }, "linux"),

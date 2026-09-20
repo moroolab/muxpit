@@ -12,10 +12,6 @@ import { WindowControls } from "./WindowControls";
 import type { SshConnection } from "../utils/sshConnection";
 import { buildWorkspaceTabView } from "../utils/workspaceTabTitle";
 import { computeSessionTabWidth } from "../utils/topBarLayout";
-import { useLaunchProfileStore } from "../stores/launchProfiles";
-import { useNotificationStore } from "../stores/notifications";
-import { useAgentTaskStore } from "../stores/agentTasks";
-import { attentionAgentTasks } from "../utils/agentTask";
 
 interface SidebarMonitorInfo {
   monitorId: string;
@@ -26,7 +22,6 @@ interface SidebarMonitorInfo {
 
 interface TopDashboardBarProps {
   onOpenSettings?: () => void;
-  onOpenAgentLauncher?: () => void;
   onOpenSshPanel?: () => void;
   onEditHost?: (hostId: string) => void;
   onConnectHost?: (host: SshHost) => void;
@@ -35,10 +30,6 @@ interface TopDashboardBarProps {
   onWindowMinimize?: () => void;
   onWindowMaximize?: () => void;
   onWindowClose?: () => void;
-  gridView?: boolean;
-  onToggleGridView?: () => void;
-  filesRailVisible?: boolean;
-  onToggleFilesRail?: () => void;
 }
 
 type TopTab = "hosts" | "monitor";
@@ -83,7 +74,6 @@ const NEW_SESSION_BUTTON_SPACE = 26 + 3;
 
 export const TopDashboardBar = ({
   onOpenSettings,
-  onOpenAgentLauncher,
   onOpenSshPanel,
   onEditHost,
   onConnectHost,
@@ -92,10 +82,6 @@ export const TopDashboardBar = ({
   onWindowMinimize,
   onWindowMaximize,
   onWindowClose,
-  gridView,
-  onToggleGridView,
-  filesRailVisible,
-  onToggleFilesRail,
 }: TopDashboardBarProps) => {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeId = useWorkspaceStore((s) => s.activeId);
@@ -111,12 +97,6 @@ export const TopDashboardBar = ({
   const visibleTab = pinnedTab ?? hoveredTab;
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
-  const toggleProfiles = useLaunchProfileStore((state) => state.togglePanel);
-  const notifications = useNotificationStore((state) => state.notifications);
-  const toggleInbox = useNotificationStore((state) => state.togglePanel);
-  const agentTasks = useAgentTaskStore((state) => state.tasks);
-  const totalUnread = notifications.filter((notification) => !notification.read).length
-    + attentionAgentTasks(agentTasks).length;
   const sessionTabsRowRef = useRef<HTMLDivElement>(null);
   const [sessionTabsRowWidth, setSessionTabsRowWidth] = useState(0);
 
@@ -298,46 +278,6 @@ export const TopDashboardBar = ({
               </div>
             )}
           </div>
-          <button
-            className="muxpit-btn"
-            onClick={onToggleFilesRail}
-            style={{ ...styles.commandButton, ...(filesRailVisible ? styles.commandButtonActive : {}) }}
-            title={filesRailVisible ? "Hide files rail" : "Show files rail"}
-          >
-            Files
-          </button>
-          <button
-            className="muxpit-btn"
-            onClick={onToggleGridView}
-            style={{ ...styles.commandButton, ...(gridView ? styles.commandButtonActive : {}) }}
-            title="Grid overview"
-          >
-            Grid
-          </button>
-          <button
-            className="muxpit-btn"
-            onClick={toggleProfiles}
-            style={styles.commandButton}
-            title="Launch profiles"
-          >
-            Profiles
-          </button>
-          <button
-            className="muxpit-btn"
-            onClick={onOpenAgentLauncher}
-            style={styles.commandButton}
-            title="Open AI pane"
-          >
-            AI
-          </button>
-          <button
-            className="muxpit-btn"
-            onClick={toggleInbox}
-            style={styles.commandButton}
-            title="Agent inbox (Ctrl+Shift+I)"
-          >
-            Inbox{totalUnread > 0 ? ` ${totalUnread}` : ""}
-          </button>
           <button
             className="muxpit-btn"
             onClick={onOpenSettings}
@@ -836,11 +776,6 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     padding: "0 8px",
     fontSize: 12,
-  },
-  commandButtonActive: {
-    borderColor: "var(--muxpit-hairline-strong)",
-    background: "var(--muxpit-bg-elev)",
-    color: "var(--muxpit-text)",
   },
   popover: {
     position: "absolute",
