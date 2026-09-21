@@ -10,9 +10,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 
 const IMAGE_UPLOAD_OPTION_ALLOWLIST: &[&str] = &["-p", "-i", "-J", "-F", "-o", "-l"];
+const CLIPBOARD_IMAGE_NAME: &str = "muxpit-clipboard.png";
 
 pub const REMOTE_IMAGE_UPLOAD_SCRIPT: &str = "umask 077; dir=\"$HOME/.muxpit/screenshots\"; \
-     mkdir -p \"$dir\" && muxpit_image_path=$(mktemp \"$dir/muxpit-XXXXXX.png\") && \
+     mkdir -p \"$dir\" && muxpit_image_path=\"$dir/muxpit-clipboard.png\" && \
      cat > \"$muxpit_image_path\" && chmod 600 \"$muxpit_image_path\" && printf '%s\\n' \"$muxpit_image_path\"";
 
 #[derive(Clone, Copy)]
@@ -107,32 +108,26 @@ fn ensure_private_image_dir(dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn unique_image_file(dir: &Path) -> Result<(PathBuf, File), String> {
-    let stamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
-    let pid = std::process::id();
+fn overwrite_image_file(dir: &Path) -> Result<(PathBuf, File), String> {
+    let path = dir.join(CLIPBOARD_IMAGE_NAME);
+    let mut options = OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    options.mode(0o600);
+    let file = options
+        .open(&path)
+        .map_err(|err| format!("image file create failed: {err}"))?;
 
-    for attempt in 0..1000_u16 {
-        let path = dir.join(format!("muxpit-{stamp}-{pid}-{attempt}.png"));
-        let mut options = OpenOptions::new();
-        options.write(true).create_new(true);
-        #[cfg(unix)]
-        options.mode(0o600);
-        match options.open(&path) {
-            Ok(file) => return Ok((path, file)),
-            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(err) => return Err(format!("image file create failed: {err}")),
-        }
-    }
+    #[cfg(unix)]
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o600))
+        .map_err(|err| format!("image file permission update failed: {err}"))?;
 
-    Err("image file create failed: could not allocate unique path".to_string())
+    Ok((path, file))
 }
 
 fn save_image_bytes_to_dir(dir: &Path, bytes: &[u8]) -> Result<PathBuf, String> {
     ensure_private_image_dir(dir)?;
-    let (path, mut file) = unique_image_file(dir)?;
+    let (path, mut file) = overwrite_image_file(dir)?;
     file.write_all(bytes)
         .map_err(|e| format!("image write failed: {e}"))?;
     Ok(path)
@@ -250,6 +245,20 @@ mod tests {
     }
 
     #[test]
+    fn local_image_save_overwrites_the_same_clipboard_path() {
+        let root = unique_test_dir("local-image-overwrite");
+        let dir = root.join(".muxpit").join("screenshots");
+        let first = save_image_bytes_to_dir(&dir, b"first").unwrap();
+        let second = save_image_bytes_to_dir(&dir, b"second-image").unwrap();
+
+        assert_eq!(first, second);
+        assert_eq!(first.file_name().and_then(|name| name.to_str()), Some(CLIPBOARD_IMAGE_NAME));
+        assert_eq!(fs::read(&second).unwrap(), b"second-image");
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn local_image_save_rejects_invalid_base64_before_writing() {
         let err = save_image_locally_sync("%%%").unwrap_err();
         assert!(err.contains("invalid image data"));
@@ -335,6 +344,12 @@ mod tests {
     fn remote_image_script_does_not_assign_zsh_path_special_parameter() {
         assert!(REMOTE_IMAGE_UPLOAD_SCRIPT.contains("muxpit_image_path="));
         assert!(!REMOTE_IMAGE_UPLOAD_SCRIPT.contains(" path="));
+    }
+
+    #[test]
+    fn remote_image_script_overwrites_a_fixed_clipboard_path() {
+        assert!(REMOTE_IMAGE_UPLOAD_SCRIPT.contains("muxpit-clipboard.png"));
+        assert!(!REMOTE_IMAGE_UPLOAD_SCRIPT.contains("mktemp"));
     }
 
     #[test]
