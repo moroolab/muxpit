@@ -53,6 +53,7 @@
     "allow-desktop-claude-session",
     "allow-save-image-locally",
     "allow-push-image-to-remote",
+    "allow-push-file-to-remote",
     "allow-tmux-list-sessions",
     "allow-tmux-active-pane-cwd",
     "allow-tmux-switch-client",

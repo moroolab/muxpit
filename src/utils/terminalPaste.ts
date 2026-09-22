@@ -23,6 +23,14 @@ export interface TerminalImageStore {
   }): Promise<string>;
 }
 
+export interface TerminalFileStore {
+  pushFileToRemote(input: {
+    sshCommand: string;
+    sshConnection: SshConnection | null;
+    localPath: string;
+  }): Promise<string>;
+}
+
 export interface TerminalRemotePasteTarget {
   spawnCommand: string | null;
   spawnSshConnection: SshConnection | null;
@@ -112,13 +120,68 @@ export const resolveTerminalImagePasteTarget = ({
   return { kind: "local" };
 };
 
-export const formatPastedImagePath = (
+export type TerminalPasteTarget = TerminalImagePasteTarget;
+
+export const resolveTerminalPasteTarget = resolveTerminalImagePasteTarget;
+
+export const formatPastedPath = (
   path: string,
-  target: TerminalImagePasteTarget,
+  target: TerminalPasteTarget,
   platform: RuntimePlatform = getRuntimePlatform(),
 ): string => {
   if (target.kind === "remote") return quotePosixShellArg(path);
   return platform === "windows" ? quoteWindowsShellArg(path) : quotePosixShellArg(path);
+};
+
+export const formatPastedImagePath = formatPastedPath;
+
+export interface TerminalFilesPasteOptions {
+  paths: readonly string[];
+  fileStore: TerminalFileStore;
+  surface: TerminalPasteSurface;
+  spawnCommand: string | null;
+  spawnSshConnection: SshConnection | null;
+  platform?: RuntimePlatform;
+  logError?: (...args: unknown[]) => void;
+}
+
+/**
+ * OS file drop. Local panes paste the original paths untouched; SSH panes
+ * upload each file to the host first and paste the returned remote paths.
+ * Per-file upload failures are reported inline and do not block the rest.
+ */
+export const pasteTerminalFiles = async ({
+  paths,
+  fileStore,
+  surface,
+  spawnCommand,
+  spawnSshConnection,
+  platform = getRuntimePlatform(),
+  logError = console.error,
+}: TerminalFilesPasteOptions): Promise<void> => {
+  if (paths.length === 0) return;
+  const target = resolveTerminalPasteTarget({ spawnCommand, spawnSshConnection });
+
+  const resolved: string[] = [];
+  if (target.kind === "local") {
+    resolved.push(...paths);
+  } else {
+    for (const localPath of paths) {
+      try {
+        resolved.push(await fileStore.pushFileToRemote({
+          sshCommand: target.sshCommand,
+          sshConnection: target.sshConnection,
+          localPath,
+        }));
+      } catch (err) {
+        logError("[muxpit] file drop upload failed:", err);
+        surface.write(`\r\n\x1b[31m[file drop failed: ${err}]\x1b[0m\r\n`);
+      }
+    }
+  }
+
+  if (resolved.length === 0) return;
+  surface.paste(resolved.map((path) => formatPastedPath(path, target, platform)).join(" ") + " ");
 };
 
 export const pasteTerminalImage = async ({

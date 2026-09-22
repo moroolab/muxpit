@@ -28,6 +28,7 @@ import {
   type SshConnection,
 } from "../utils/sshConnection";
 import { tauriPtyBackend } from "../utils/tauriPtyBackend";
+import { shouldResizePty } from "../utils/terminalFit";
 import { createTerminalClipboard, type TerminalClipboardPort } from "../utils/terminalClipboard";
 import { decideTerminalInput, shouldReadTerminalSelectionForInput } from "../utils/terminalInput";
 import {
@@ -379,6 +380,7 @@ export const useTerminalSession = ({
 
     const onResize = surface.onResize(({ rows, cols }) => {
       if (ptyId === 0) return;
+      if (!shouldResizePty({ rows, cols, hidden: document.hidden })) return;
       tauriPtyBackend.resize(ptyId, rows, cols).catch(console.error);
     });
 
@@ -528,6 +530,8 @@ export const useTerminalSession = ({
     terminalInstances.set(leafId, {
       surface,
       ptyId,
+      spawnCommand,
+      spawnSshConnection,
       cleanup: { unlistenOutput, unlistenExit, onData, onResize, onPaste, writeBuffer },
     });
 

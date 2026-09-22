@@ -3,6 +3,7 @@ import type {
   PtyBackend,
   PtyExit,
   PtyOutput,
+  PushFileToRemoteRequest,
   PushImageToRemoteRequest,
   SaveImageLocallyRequest,
   ShellContext,
@@ -84,5 +85,11 @@ export const tauriPtyBackend: PtyBackend = {
       sshCommand: request.sshCommand,
       sshConnection: request.sshConnection,
       imageBase64: request.imageBase64,
+    }),
+  pushFileToRemote: (request: PushFileToRemoteRequest) =>
+    invoke<string>("push_file_to_remote", {
+      sshCommand: request.sshCommand,
+      sshConnection: request.sshConnection,
+      localPath: request.localPath,
     }),
 };

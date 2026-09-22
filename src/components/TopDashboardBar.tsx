@@ -12,6 +12,7 @@ import { WindowControls } from "./WindowControls";
 import type { SshConnection } from "../utils/sshConnection";
 import { buildWorkspaceTabView } from "../utils/workspaceTabTitle";
 import { computeSessionTabWidth } from "../utils/topBarLayout";
+import { TAB_INDEX_ATTR, startPointerReorder } from "../utils/pointerReorder";
 
 interface SidebarMonitorInfo {
   monitorId: string;
@@ -138,11 +139,16 @@ export const TopDashboardBar = ({
     setOverIndex(null);
   };
 
-  const dropOnTab = (targetIndex: number) => {
-    if (dragIndex !== null && dragIndex !== targetIndex) {
-      reorderWorkspaces(dragIndex, targetIndex);
-    }
-    endDrag();
+  const beginTabReorder = (event: React.PointerEvent<HTMLButtonElement>, index: number) => {
+    startPointerReorder(event, index, {
+      onDragStart: setDragIndex,
+      onDragOver: setOverIndex,
+      onDrop: (from, to) => {
+        if (to !== null && from !== to) reorderWorkspaces(from, to);
+        endDrag();
+      },
+      onCancel: endDrag,
+    });
   };
 
   const closeWorkspace = (event: React.MouseEvent, id: string) => {
@@ -187,21 +193,7 @@ export const TopDashboardBar = ({
                 tmuxSessions={tmuxByWs[workspace.id]?.sessions}
                 onActivate={() => setActive(workspace.id)}
                 onClose={(event) => closeWorkspace(event, workspace.id)}
-                onDragStart={(event) => {
-                  setDragIndex(index);
-                  event.dataTransfer.effectAllowed = "move";
-                }}
-                onDragOver={(event) => {
-                  if (dragIndex === null) return;
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = "move";
-                  if (overIndex !== index) setOverIndex(index);
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  dropOnTab(index);
-                }}
-                onDragEnd={endDrag}
+                onPointerDown={(event) => beginTabReorder(event, index)}
               />
             ))}
           </div>
@@ -308,10 +300,7 @@ const WorkspaceTab = ({
   tmuxSessions,
   onActivate,
   onClose,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd,
+  onPointerDown,
 }: {
   workspace: Workspace;
   index: number;
@@ -323,10 +312,7 @@ const WorkspaceTab = ({
   tmuxSessions?: TmuxSession[];
   onActivate: () => void;
   onClose: (event: React.MouseEvent) => void;
-  onDragStart: (event: React.DragEvent<HTMLButtonElement>) => void;
-  onDragOver: (event: React.DragEvent<HTMLButtonElement>) => void;
-  onDrop: (event: React.DragEvent<HTMLButtonElement>) => void;
-  onDragEnd: () => void;
+  onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => void;
 }) => {
   // Subscribed per-workspace so an OSC7/title/gitBranch update on one
   // workspace only re-renders its own tab, not the whole tab bar.
@@ -338,11 +324,8 @@ const WorkspaceTab = ({
     <button
       className={`muxpit-btn muxpit-top-tab${isActive ? " muxpit-ws-active" : ""}`}
       onClick={onActivate}
-      draggable
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDragEnd={onDragEnd}
+      onPointerDown={onPointerDown}
+      {...{ [TAB_INDEX_ATTR]: index }}
       style={{
         ...styles.sessionTab,
         width,

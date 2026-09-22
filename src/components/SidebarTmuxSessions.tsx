@@ -99,9 +99,9 @@ export const SidebarTmuxSessions = ({ wsId, wrapperSession, isWsActive }: Props)
     <div
       className="muxpit-tmux-sessions"
       style={styles.container}
-      // Parent ws-item handles workspace drag; if we let its onDragStart fire
-      // from inside this list, clicks get swallowed. Parent checks for this
-      // className and bails out (see Sidebar.tsx).
+      // Parent ws-item handles workspace reordering on pointerdown; this list
+      // is rendered as a sibling and `isReorderHandle` also rejects this
+      // className, so session-row clicks are never treated as a drag.
       onMouseDown={(e) => e.stopPropagation()}
     >
       {entry.error && (

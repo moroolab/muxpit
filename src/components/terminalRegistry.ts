@@ -1,11 +1,16 @@
 import { useSettingsStore } from "../stores/settings";
 import { getResolvedTheme } from "../themes";
+import type { SshConnection } from "../utils/sshConnection";
 import { tauriPtyBackend } from "../utils/tauriPtyBackend";
 import type { TerminalDisposable, TerminalSurface } from "./terminalSurface";
 
 export interface TerminalInstance {
   surface: TerminalSurface;
   ptyId: number;
+  // Spawn source kept so out-of-band inputs (OS file drop) can resolve the
+  // pane's local/remote paste target the same way Ctrl+V does.
+  spawnCommand: string | null;
+  spawnSshConnection: SshConnection | null;
   cleanup: {
     unlistenOutput: () => void;
     unlistenExit: () => void;

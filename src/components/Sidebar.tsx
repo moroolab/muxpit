@@ -12,6 +12,7 @@ import { SidebarTmuxSessions } from "./SidebarTmuxSessions";
 import { useMonitorStore, type MonitorSnapshot } from "../stores/monitor";
 import { useState, useRef } from "react";
 import type { SshConnection } from "../utils/sshConnection";
+import { TAB_INDEX_ATTR, startPointerReorder } from "../utils/pointerReorder";
 
 interface SidebarMonitorInfo {
   monitorId: string;
@@ -307,37 +308,27 @@ export const Sidebar = ({ onOpenSettings, onOpenSshPanel, onEditHost, onConnectH
               <div key={ws.id}>
               <div
                 className={`muxpit-ws-item${isActive ? " muxpit-ws-active" : ""}`}
-                draggable={editingId !== ws.id}
-                onDragStart={(e) => {
-                  dragFromIdxRef.current = i;
-                  setDragFromIdx(i);
-                  e.dataTransfer.effectAllowed = "move";
-                  // WebView2 / WKWebView require setData to actually initiate the drag
-                  e.dataTransfer.setData("text/plain", ws.id);
-                }}
-                onDragOver={(e) => {
-                  if (dragFromIdxRef.current === null) return;
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = "move";
-                  if (dragOverIdx !== i) setDragOverIdx(i);
-                }}
-                onDragLeave={() => {
-                  if (dragOverIdx === i) setDragOverIdx(null);
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const from = dragFromIdxRef.current;
-                  if (from !== null && from !== i) {
-                    reorderWorkspaces(from, i);
-                  }
-                  dragFromIdxRef.current = null;
-                  setDragFromIdx(null);
-                  setDragOverIdx(null);
-                }}
-                onDragEnd={() => {
-                  dragFromIdxRef.current = null;
-                  setDragFromIdx(null);
-                  setDragOverIdx(null);
+                {...{ [TAB_INDEX_ATTR]: i }}
+                onPointerDown={(e) => {
+                  if (editingId === ws.id) return;
+                  startPointerReorder(e, i, {
+                    onDragStart: (from) => {
+                      dragFromIdxRef.current = from;
+                      setDragFromIdx(from);
+                    },
+                    onDragOver: (over) => setDragOverIdx(over),
+                    onDrop: (from, to) => {
+                      if (to !== null && from !== to) reorderWorkspaces(from, to);
+                      dragFromIdxRef.current = null;
+                      setDragFromIdx(null);
+                      setDragOverIdx(null);
+                    },
+                    onCancel: () => {
+                      dragFromIdxRef.current = null;
+                      setDragFromIdx(null);
+                      setDragOverIdx(null);
+                    },
+                  });
                 }}
                 onClick={() => { setActive(ws.id); markRead(ws.id); }}
                 style={{
@@ -395,8 +386,8 @@ export const Sidebar = ({ onOpenSettings, onOpenSshPanel, onEditHost, onConnectH
                   </div>
                 </div>
               </div>
-              {/* Sibling, NOT child of the draggable ws-item: HTML5 drag would
-                  otherwise hijack mousedown on session rows. */}
+              {/* Sibling, NOT child of the reorderable ws-item, so pointer
+                  interaction on session rows never starts a workspace drag. */}
               {tmuxAttach[ws.id] && (
                 <SidebarTmuxSessions
                   wsId={ws.id}

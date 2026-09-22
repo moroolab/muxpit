@@ -1,8 +1,11 @@
 import { memo, useCallback, useEffect, useRef } from "react";
 import { useWorkspaceStore } from "../stores/workspace";
 import { useSettingsStore } from "../stores/settings";
+import { useFileDropStore } from "../stores/fileDrop";
+import { TERMINAL_LEAF_ATTR } from "../utils/fileDrop";
 import { useTerminalSession } from "../hooks/useTerminalSession";
 import { terminalInstances } from "./terminalRegistry";
+import { shouldFitTerminalSurface } from "../utils/terminalFit";
 
 interface TerminalLeafProps {
   workspaceId: string;
@@ -19,6 +22,7 @@ export const TerminalLeaf = memo(function TerminalLeaf({ workspaceId, leafId }: 
   const focusedLeafId = useWorkspaceStore(
     (s) => s.workspaces.find((w) => w.id === workspaceId)?.focusedLeafId,
   );
+  const isDropTarget = useFileDropStore((s) => s.targetLeafId === leafId);
 
   useTerminalSession({ workspaceId, leafId, containerRef, initializedRef });
 
@@ -26,6 +30,17 @@ export const TerminalLeaf = memo(function TerminalLeaf({ workspaceId, leafId }: 
     if (fitFrameRef.current !== null) return;
     fitFrameRef.current = requestAnimationFrame(() => {
       fitFrameRef.current = null;
+      const el = containerRef.current;
+      if (
+        !el
+        || !shouldFitTerminalSurface({
+          width: el.clientWidth,
+          height: el.clientHeight,
+          hidden: document.hidden,
+        })
+      ) {
+        return;
+      }
       const instance = terminalInstances.get(leafId);
       if (instance) instance.surface.fit();
     });
@@ -85,12 +100,15 @@ export const TerminalLeaf = memo(function TerminalLeaf({ workspaceId, leafId }: 
     <div
       ref={containerRef}
       onMouseDown={handleMouseDown}
+      {...{ [TERMINAL_LEAF_ATTR]: leafId }}
+      data-workspace-id={workspaceId}
       style={{
         width: "100%",
         height: "100%",
         backgroundColor: "#1e1e2e",
         opacity: isFocused ? 1 : 0.7,
-        transition: "opacity 0.15s",
+        transition: "opacity 0.15s, box-shadow 0.1s",
+        boxShadow: isDropTarget ? "inset 0 0 0 2px var(--muxpit-accent)" : "none",
       }}
     />
   );

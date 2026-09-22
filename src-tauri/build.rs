@@ -52,6 +52,7 @@ fn main() {
             "desktop_claude_session",
             "save_image_locally",
             "push_image_to_remote",
+            "push_file_to_remote",
             "tmux_list_sessions",
             "tmux_active_pane_cwd",
             "tmux_switch_client",

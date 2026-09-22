@@ -1,6 +1,7 @@
 mod browser;
 mod control;
 mod desktop_agent;
+mod dropped_file;
 mod file_tree;
 mod monitor;
 mod pasted_image;
@@ -19,6 +20,7 @@ use desktop_agent::{
     desktop_session_goal_set, desktop_session_goals, desktop_session_setting_set,
     desktop_session_settings, DesktopAgentManager,
 };
+use dropped_file::push_file_to_remote_sync;
 use pasted_image::{push_image_to_remote_sync, save_image_locally_sync};
 use platform::command::silent_command;
 use platform::process::{
@@ -430,6 +432,19 @@ async fn push_image_to_remote(
 }
 
 #[tauri::command]
+async fn push_file_to_remote(
+    ssh_command: Option<String>,
+    ssh_connection: Option<SshCommand>,
+    local_path: String,
+) -> Result<String, String> {
+    let ssh = resolve_ssh_command(ssh_command.as_deref(), ssh_connection)
+        .ok_or_else(|| "not an ssh pane".to_string())?;
+    tauri::async_runtime::spawn_blocking(move || push_file_to_remote_sync(&ssh, &local_path))
+        .await
+        .map_err(|e| format!("Task join error: {e}"))?
+}
+
+#[tauri::command]
 async fn tmux_list_sessions(
     ssh_command: Option<String>,
     ssh_connection: Option<SshCommand>,
@@ -576,6 +591,7 @@ pub fn run() {
             desktop_session_setting_set,
             save_image_locally,
             push_image_to_remote,
+            push_file_to_remote,
             tmux_list_sessions,
             tmux_active_pane_cwd,
             tmux_switch_client,

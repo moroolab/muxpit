@@ -32,6 +32,7 @@ import { usePrefixStore, PREFIX_TIMEOUT_MS, PANE_NUMBER_TIMEOUT_MS } from "./sto
 import { destroyTerminal, destroyAllTerminals, terminalInstances } from "./components/terminalRegistry";
 import { useWorkspaceInfoPoller, useSshContextPoller, useWorkspaceInfoStore } from "./hooks/useWorkspaceInfo";
 import { useAgentSessionProcessMonitor } from "./hooks/useAgentSessionProcessMonitor";
+import { useFileDrop } from "./hooks/useFileDrop";
 import { applyThemeVars, getResolvedTheme } from "./themes";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
@@ -170,6 +171,7 @@ export const App = () => {
   // Codex has no native SessionEnd hook, so clear local resume bindings when
   // the Codex process disappears from the pane's PTY process tree.
   useAgentSessionProcessMonitor(2000);
+  useFileDrop();
 
   useEffect(() => {
     const settings = useSettingsStore.getState();

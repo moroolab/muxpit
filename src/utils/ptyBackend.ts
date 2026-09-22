@@ -49,6 +49,12 @@ export interface SaveImageLocallyRequest {
   imageBase64: string;
 }
 
+export interface PushFileToRemoteRequest {
+  sshCommand: string;
+  sshConnection: SshConnection | null;
+  localPath: string;
+}
+
 export interface PtyBackend {
   onOutput(handler: (payload: PtyOutput) => void): Promise<() => void>;
   onExit(handler: (payload: PtyExit) => void): Promise<() => void>;
@@ -61,6 +67,7 @@ export interface PtyBackend {
   hasAgentProcess(id: number, agent: "codex" | "claude"): Promise<boolean>;
   saveImageLocally(request: SaveImageLocallyRequest): Promise<string>;
   pushImageToRemote(request: PushImageToRemoteRequest): Promise<string>;
+  pushFileToRemote(request: PushFileToRemoteRequest): Promise<string>;
 }
 
 export interface SpawnTerminalPtyRequest {
